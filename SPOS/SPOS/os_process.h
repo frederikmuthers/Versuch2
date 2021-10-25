@@ -15,8 +15,7 @@
 #include <stdbool.h>
 
 //! The type for the ID of a running process.
-#warning IMPLEMENT STH. HERE
-typedef ? ProcessID;
+typedef uint8_t ProcessID;
 
 //! The type for the ID of a program.
 typedef uint8_t ProgramID;
