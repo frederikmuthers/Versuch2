@@ -30,8 +30,11 @@ Everything that is necessary to get the input from the Buttons in a clean format
 	C7 ESC
 */
 uint8_t os_getInput(void) {
-	//nicht an den vier Mittleren Pins interessiert
-	uint8_t  a = PINC & 0b11000011;
+	/*
+	Alle Eingabebits müssen geflippt werden da Button gedrückt = 0 und Button nicht gedrückt = 1 im PIN Register ist
+	Nicht an den vier Mittleren Pins interessiert, da diese nicht an Buttons angeschlossen sind
+	*/
+	uint8_t  a = ~PINC & 0b11000011;
 	//extrahiere zwei höchsten Bits (Button Up und ESC)
 	uint8_t b = a & 0b11000000;
 	//shifte diese Bits an die Stelle Nummer 2 und 3
