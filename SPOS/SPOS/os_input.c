@@ -34,11 +34,11 @@ uint8_t os_getInput(void) {
 	Alle Eingabebits müssen geflippt werden da Button gedrückt = 0 und Button nicht gedrückt = 1 im PIN Register ist
 	Nicht an den vier Mittleren Pins interessiert, da diese nicht an Buttons angeschlossen sind
 	*/
-	uint8_t  a = ~PINC & 0b11000011;
-	//extrahiere zwei höchsten Bits (Button Up und ESC)
+	uint8_t  a = ~(PINC) & 0b11000011;
+	//extrahiere zwei höchsten Bits (Up und ESC)
 	uint8_t b = a & 0b11000000;
 	//shifte diese Bits an die Stelle Nummer 2 und 3
-	b = b >> 4;
+	b = (b >> 4);
 	//Füge diese Bits der Rückgabe wieder hinzu
 	a |= b;
 	return a; 
