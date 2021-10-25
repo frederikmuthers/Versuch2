@@ -131,5 +131,19 @@ void os_init(void) {
  *  \param str  The error to be displayed
  */
 void os_errorPStr(char const* str) {
-    #warning IMPLEMENT STH. HERE
+    //deaktivieren der Interrupts mit dem Statusregister SREG
+	SREG &=  0b01111111;
+	//vorherigen Displayinhalt löschen
+	lcd_clear();
+	lcd_writeErrorProgString(str);
+	
+	//warte bis ESC + Enter gedrückt sind
+	while(os_getInput() != 0b00001001){
+		os_waitForInput();
+	}
+	//warte bis alle Tasten wieder lsogelassen wurden
+	os_waitForNoInput()
+	//ktiviere Interrupts
+	SREG |= 0b10000000;
+	
 }
