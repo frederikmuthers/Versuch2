@@ -17,7 +17,7 @@
 //----------------------------------------------------------------------------
 
 //! Array of states for every possible process
-#warning IMPLEMENT STH. HERE
+Process os_processes[MAX_NUMBER_OF_PROCESSES];
 
 //! Array of function pointers for every registered program
 Program *os_programs[MAX_NUMBER_OF_PROGRAMS];
