@@ -19,7 +19,7 @@ Everything that is necessary to get the input from the Buttons in a clean format
  *
  */
 /*
-	Belegung des PortsC
+	Belegung des Ports C
 	C0 Enter
 	C1 Down
 	C2 JTAG
@@ -30,9 +30,9 @@ Everything that is necessary to get the input from the Buttons in a clean format
 	C7 ESC
 */
 uint8_t os_getInput(void) {
-	//nicht an den viert Mittleren Pins interessiert
+	//nicht an den vier Mittleren Pins interessiert
 	uint8_t  a = PINC & 0b11000011;
-	//extrahiere zwei höchsten Buts (Button Up und ESC)
+	//extrahiere zwei höchsten Bits (Button Up und ESC)
 	uint8_t b = a & 0b11000000;
 	//shifte diese Bits an die Stelle Nummer 2 und 3
 	b = b >> 4;

@@ -141,9 +141,9 @@ void os_errorPStr(char const* str) {
 	while(os_getInput() != 0b00001001){
 		os_waitForInput();
 	}
-	//warte bis alle Tasten wieder lsogelassen wurden
+	//warte bis alle Tasten wieder losgelassen wurden
 	os_waitForNoInput()
-	//ktiviere Interrupts
+	//aktiviere Interrupts
 	SREG |= 0b10000000;
 	
 }
