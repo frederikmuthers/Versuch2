@@ -33,7 +33,7 @@ ProcessID currentProc;
 SchedulingStrategy currentSchedulingStrategy;
 
 //! Count of currently nested critical sections
-#warning IMPLEMENT STH. HERE
+uint8_t criticalSectionCount;
 
 //! Used to auto-execute programs.
 uint16_t os_autostart;
@@ -358,7 +358,20 @@ SchedulingStrategy os_getSchedulingStrategy(void) {
  *  This function supports up to 255 nested critical sections.
  */
 void os_enterCriticalSection(void) {
-    #warning IMPLEMENT STH. HERE
+	//speicher GIEB 
+    uint8_t GlobalInterruptEnableBit = SREG & 0b10000000;
+	
+	//deaktiviere GIEB
+	SREG &= 0b01111111; 
+	
+	//inkrementiere Verschatelungstiefe um 1
+	criticalSectionCount++;
+	
+	//deaktiviere Scheduler mit OCIE2A Bit (1. Bit)
+	TIMSK2 &= 0b11111101;
+	
+	//Wiederherstellung des gespeicherten GIEB
+	SREG |= GlobalInterruptEnableBit;
 }
 
 /*!
@@ -368,7 +381,24 @@ void os_enterCriticalSection(void) {
  *  has to be reactivated.
  */
 void os_leaveCriticalSection(void) {
-    #warning IMPLEMENT STH. HERE
+    //speicher GIEB
+    uint8_t GlobalInterruptEnableBit = SREG & 0b10000000;
+    
+    //deaktiviere GIEB
+    SREG &= 0b01111111;
+	
+	//dekrementiere Verschaftelungstiefe um 1
+	criticalSectionCount--;
+	
+	if(criticalSectionCount < 0){
+		os_errorPStr("Zu oft os_leaveCriticalSection aufgerufen");
+	} else if(criticalSectionCount == 0){
+		//aktiviere Scheduler mit OCIE2A Bit (1. Bit) falls keine kritischer Bereich vorliegt
+		TIMSK2 |= 0b00000010; 
+	}
+	
+	//Wiederherstellung des gespeicherten GIEB
+	SREG |= GlobalInterruptEnableBit;
 }
 
 /*!
