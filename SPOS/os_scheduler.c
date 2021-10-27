@@ -17,10 +17,10 @@
 //----------------------------------------------------------------------------
 
 //! Array of states for every possible process
-#warning IMPLEMENT STH. HERE
+Process os_processes[MAX_NUMBER_OF_PROCESSES];
 
 //! Array of function pointers for every registered program
-#warning IMPLEMENT STH. HERE
+Program *os_programs[MAX_NUMBER_OF_PROGRAMS];
 
 //! Index of process that is currently executed (default: idle)
 #warning IMPLEMENT STH. HERE
@@ -158,7 +158,53 @@ ProgramID os_lookupProgramID(Program* program) {
  *          defines.h on failure
  */
 ProcessID os_exec(ProgramID programID, Priority priority) {
-    #warning IMPLEMENT STH. HERE
+    for (ProcessID pid = 0 ; pid < MAX_NUMBER_OF_PROCESSES ; pid++){
+		/*prozess state is unused wenn
+			a) gerade initialisiert
+			b) state auf unused gesetzt
+		*/
+		if (os_processes[pid].state == OS_PS_UNUSED){
+			//wähle program aus mit hilfsfunktion
+			Program *funktionszeiger = os_lookupProgramFunction(programID);
+			//Nullpointer test
+			if(funktionszeiger == NULL){
+				return INVALID_PROCESS;
+			}else{
+				//Prozesszustand, Priorität und ProgramID speichern
+				os_processes[pid].state = OS_PS_READY;
+				os_processes[pid].priority = priority;
+				os_processes[pid].progID = &funktionszeiger;
+				//Prozessstack vorbereiten
+				StackPointer sp;
+				//geh zum Boden des Stacks
+				sp.as_int = PROCESS_STACK_BOTTOM(pid);
+				
+				//16 bit funktionszeiger als initiale Rücksrpungadresse speichern
+				uint8_t lowbyte = (uint8_t) (funktionszeiger & 0x00ff);
+				*(sp.as_ptr) = lowbyte;
+				sp.as_int -= 1;
+				uint8_t highbyte = (uint8_t) (funktionszeiger >> 8);
+				*(sp.as_ptr) = highbyte;
+				sp.as_int -= 1;
+				
+				//33 0 Bytes folgen. 1 für Statusregister (SREG) und 32 für Laufzeitkontext
+				for (uint8_t i = 0 ; i < 33 ; i++){
+					*(sp.as_ptr) = 0x00;
+					sp.as_int -= 1;
+				}
+				
+				//setzte Stackpointer auf erste freie Speicherzelle
+				sp.as_int = PROCESS_STACK_BOTTOM(pid) - 2;
+				
+				//speichere Stackpointer im neuen Prozess
+				os_processes[pid].sp = sp;
+				
+				return pid;
+			}
+		}
+	}
+	//keine unbenutzen Prozessslots
+	return INVALID_PROCESS;
 }
 
 /*!
