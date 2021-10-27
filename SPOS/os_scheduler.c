@@ -199,7 +199,9 @@ ProgramID os_lookupProgramID(Program* program) {
  *          defines.h on failure
  */
 ProcessID os_exec(ProgramID programID, Priority priority) {
-    for (ProcessID pid = 0 ; pid < MAX_NUMBER_OF_PROCESSES ; pid++){
+    //kritischer Bereich
+	os_enterCriticalSection();
+	for (ProcessID pid = 0 ; pid < MAX_NUMBER_OF_PROCESSES ; pid++){
 		/*prozess state ist unused wenn
 			a) gerade initialisiert
 			b) state auf unused gesetzt
@@ -209,6 +211,8 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 			Program *funktionszeiger = os_lookupProgramFunction(programID);
 			//Nullpointer test
 			if(funktionszeiger == NULL){
+				//kritischen Bereich verlassen und Funktion beenden
+				os_leaveCriticalSection();
 				return INVALID_PROCESS;
 			}else{
 				//Prozesszustand, Priorität und ProgramID speichern
@@ -237,11 +241,15 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 				//speichere Stackpointer im neuen Prozess
 				os_processes[pid].sp = sp;
 				
+				//kritischen Bereich verlassen und Funktion beenden
+				os_leaveCriticalSection();
 				return pid;
 			}
 		}
 	}
 	//keine unbenutzen Prozessslots
+	//kritischen Bereich verlassen und Funktion beenden
+	os_leaveCriticalSection();
 	return INVALID_PROCESS;
 }
 
@@ -391,9 +399,10 @@ void os_leaveCriticalSection(void) {
 	criticalSectionCount--;
 	
 	if(criticalSectionCount < 0){
+		//Fehlermeldung, falls mehr Kritische Bereiche verlassen wurden als betreten wurden
 		os_errorPStr("Zu oft os_leaveCriticalSection aufgerufen");
 	} else if(criticalSectionCount == 0){
-		//aktiviere Scheduler mit OCIE2A Bit (1. Bit) falls keine kritischer Bereich vorliegt
+		//aktiviere Scheduler mit OCIE2A Bit (1. Bit) falls kein kritischer Bereich vorliegt
 		TIMSK2 |= 0b00000010; 
 	}
 	
@@ -408,5 +417,15 @@ void os_leaveCriticalSection(void) {
  *  \return The checksum of the pid'th stack.
  */
 StackChecksum os_getStackChecksum(ProcessID pid) {
-    #warning IMPLEMENT STH. HERE
+	StackPointer sp;
+	StackChecksum sum;
+	//vom Boden des Stacks anfangen
+    sp.as_int = PROCESS_STACK_BOTTOM(pid);
+	sum = *(sp.as_ptr);
+	//bis zum Stackpointer durchlaufen und Bytes xor verknüpfen
+	while (sp.as_int > os_processes[pid].sp.as_int){
+		sp.as_int--;
+		sum = sum ^ *(sp.as_ptr);
+	}
+	return sum;
 }
