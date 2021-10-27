@@ -23,7 +23,7 @@ Process os_processes[MAX_NUMBER_OF_PROCESSES];
 Program *os_programs[MAX_NUMBER_OF_PROGRAMS];
 
 //! Index of process that is currently executed (default: idle)
-#warning IMPLEMENT STH. HERE
+ProcessID currentProc;
 
 //----------------------------------------------------------------------------
 // Private variables
@@ -58,7 +58,15 @@ ISR(TIMER2_COMPA_vect) __attribute__((naked));
  *  the processor to that process.
  */
 ISR(TIMER2_COMPA_vect) {
-    #warning IMPLEMENT STH. HERE
+    saveContext();
+	os_processes[os_getCurrentProc()].sp = SP;
+	SP = BOTTOM_OF_ISR_STACK;
+	os_processes[os_getCurrentProc()].state = OS_PS_READY;
+	//Asuwahl des nächsetn prozesses (fehlt)
+	os_processes[os_getCurrentProc()].state = OS_PS_RUNNING;
+	//stackpointer für fortzuführenden Prozess wiederherstellen
+	SP = os_processes[os_getCurrentProc()].sp;
+	restoreContext();
 }
 
 /*!
@@ -159,7 +167,7 @@ ProgramID os_lookupProgramID(Program* program) {
  */
 ProcessID os_exec(ProgramID programID, Priority priority) {
     for (ProcessID pid = 0 ; pid < MAX_NUMBER_OF_PROCESSES ; pid++){
-		/*prozess state is unused wenn
+		/*prozess state ist unused wenn
 			a) gerade initialisiert
 			b) state auf unused gesetzt
 		*/
@@ -173,7 +181,7 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 				//Prozesszustand, Priorität und ProgramID speichern
 				os_processes[pid].state = OS_PS_READY;
 				os_processes[pid].priority = priority;
-				os_processes[pid].progID = &funktionszeiger;
+				os_processes[pid].progID = programID;
 				//Prozessstack vorbereiten
 				StackPointer sp;
 				//geh zum Boden des Stacks
@@ -192,9 +200,6 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 					*(sp.as_ptr) = 0x00;
 					sp.as_int -= 1;
 				}
-				
-				//setzte Stackpointer auf erste freie Speicherzelle
-				sp.as_int = PROCESS_STACK_BOTTOM(pid) - 2;
 				
 				//speichere Stackpointer im neuen Prozess
 				os_processes[pid].sp = sp;
@@ -221,7 +226,16 @@ void os_startScheduler(void) {
  *  initialize its internal data-structures and register.
  */
 void os_initScheduler(void) {
-    #warning IMPLEMENT STH. HERE
+	//alle Prozessezustände werden auf unused gesetzt
+    for(ProcessID pid = 0 ; pid < MAX_NUMBER_OF_PROCESSES ; pid++){
+		os_processes[pid].state = OS_PS_UNUSED;
+	}
+	//jedes Program, was automatisch starten soll, wird ein Prozess zugeteilt
+	for(ProgramID progID = 0 ; progID < MAX_NUMBER_OF_PROGRAMS ; progID++){
+		if(os_checkAutostartProgram(progID)){
+			os_exec(progID, DEFAULT_PRIORITY);
+		}
+	}
 }
 
 /*!
@@ -250,7 +264,7 @@ Program** os_getProgramSlot(ProgramID programID) {
  *  \return The process id of the currently active process.
  */
 ProcessID os_getCurrentProc(void) {
-    #warning IMPLEMENT STH. HERE
+    return currentProc;
 }
 
 /*!
