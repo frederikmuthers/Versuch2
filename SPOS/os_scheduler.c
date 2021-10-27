@@ -58,14 +58,27 @@ ISR(TIMER2_COMPA_vect) __attribute__((naked));
  *  the processor to that process.
  */
 ISR(TIMER2_COMPA_vect) {
-    saveContext();
+    //sichere Laufzeikontext
+	saveContext();
+	
+	//sichere Stackpointer des Prozesses
 	os_processes[os_getCurrentProc()].sp = SP;
+	
+	//lade Scheduler Stack in das SP Register
 	SP = BOTTOM_OF_ISR_STACK;
+	
+	//aktueller Prozess geht von running auf ready
 	os_processes[os_getCurrentProc()].state = OS_PS_READY;
+	
 	//Asuwahl des nächsetn prozesses (fehlt)
+	
+	//fortzuführender Prozess geht auf running
 	os_processes[os_getCurrentProc()].state = OS_PS_RUNNING;
+	
 	//stackpointer für fortzuführenden Prozess wiederherstellen
 	SP = os_processes[os_getCurrentProc()].sp;
+	
+	//Laufzeitkontext des fortzuführenden Prozesses wird wiederhergestellt
 	restoreContext();
 }
 
@@ -111,7 +124,10 @@ bool os_checkAutostartProgram(ProgramID programID) {
  *  and processor time no other process wants to have.
  */
 PROGRAM(0, AUTOSTART) {
-    #warning IMPLEMENT STH. HERE
+    while(1){
+		lcd_writeString(".");
+		delayMs(DEFAULT_OUTPUT_DELAY);
+	}
 }
 
 /*!
