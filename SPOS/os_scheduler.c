@@ -62,7 +62,7 @@ ISR(TIMER2_COMPA_vect) {
 	saveContext();
 	
 	//sichere Stackpointer des Prozesses
-	os_processes[os_getCurrentProc()].sp = SP;
+	os_processes[os_getCurrentProc()].sp.as_int = SP;
 	
 	//lade Scheduler Stack in das SP Register
 	SP = BOTTOM_OF_ISR_STACK;
@@ -71,29 +71,29 @@ ISR(TIMER2_COMPA_vect) {
 	os_processes[os_getCurrentProc()].state = OS_PS_READY;
 	
 	//Asuwahl des nächsten prozesses je nach Schedule Strategy
-	if(currentSchedulingStrategy == OS_SS_EVEN) {
-		currentProc = os_Scheduler_Even(os_processes, currentProc);
-	} 
-	else if(currentSchedulingStrategy == OS_SS_RANDOM){
-		currentProc = os_Scheduler_Random(os_processes, currentProc);
-	} 
-	else if(currentSchedulingStrategy == OS_SS_ROUND_ROBIN){
-		currentProc = os_Scheduler_RoundRobin(os_processes, currentProc);
-		
-	} 
-	else if(currentSchedulingStrategy == OS_SS_INACTIVE_AGING){
-		currentProc = os_Scheduler_InactiveAging(os_processes, currentProc);
-	} 
-	//Nur noch Run to completion is übrig
-	else{
-		currentProc = os_Scheduler_RunToCompletion(os_processes, currentProc);
+	switch(currentSchedulingStrategy){
+		case OS_SS_EVEN:
+			currentProc = os_Scheduler_Even(os_processes, os_getCurrentProc());
+			break;
+		case OS_SS_RANDOM:
+			currentProc = os_Scheduler_Random(os_processes, os_getCurrentProc());
+			break;
+		case OS_SS_ROUND_ROBIN:
+			currentProc = os_Scheduler_RoundRobin(os_processes, os_getCurrentProc());
+			break;
+		case OS_SS_RUN_TO_COMPLETION:
+			currentProc = os_Scheduler_RunToCompletion(os_processes, os_getCurrentProc());
+			break;
+		default:
+			currentProc = os_Scheduler_InactiveAging(os_processes, os_getCurrentProc());
+			break;
 	}
 	
 	//fortzuführender Prozess geht auf running
 	os_processes[os_getCurrentProc()].state = OS_PS_RUNNING;
 	
 	//stackpointer für fortzuführenden Prozess wiederherstellen
-	SP = os_processes[os_getCurrentProc()].sp;
+	SP = os_processes[os_getCurrentProc()].sp.as_int;
 	
 	//Laufzeitkontext des fortzuführenden Prozesses wird wiederhergestellt
 	restoreContext();
@@ -142,7 +142,7 @@ bool os_checkAutostartProgram(ProgramID programID) {
  */
 PROGRAM(0, AUTOSTART) {
     while(1){
-		lcd_writeString(".\n");
+		lcd_writeString(".");
 		delayMs(DEFAULT_OUTPUT_DELAY);
 	}
 }
@@ -238,8 +238,8 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 					sp.as_int -= 1;
 				}
 				
-				//speichere Stackpointer im neuen Prozess
-				os_processes[pid].sp = sp;
+				//speichere Stackpointer im zu initialisierenden Prozess
+				os_processes[pid].sp.as_int = sp.as_int;
 				
 				//kritischen Bereich verlassen und Funktion beenden
 				os_leaveCriticalSection();
@@ -261,7 +261,7 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 void os_startScheduler(void) {
 	currentProc = 0;
 	os_processes[os_getCurrentProc()].state = OS_PS_RUNNING;
-	PS = os_processes[os_getCurrentProc()].sp;
+	PS = os_processes[os_getCurrentProc()].sp.as_int;
 	restoreContext();
 }
 
@@ -400,7 +400,7 @@ void os_leaveCriticalSection(void) {
 	
 	if(criticalSectionCount < 0){
 		//Fehlermeldung, falls mehr Kritische Bereiche verlassen wurden als betreten wurden
-		os_errorPStr("Zu oft os_leaveCriticalSection aufgerufen");
+		os_error("Zu oft os_leaveCriticalSection aufgerufen");
 	} else if(criticalSectionCount == 0){
 		//aktiviere Scheduler mit OCIE2A Bit (1. Bit) falls kein kritischer Bereich vorliegt
 		TIMSK2 |= 0b00000010; 
@@ -422,10 +422,11 @@ StackChecksum os_getStackChecksum(ProcessID pid) {
 	//vom Boden des Stacks anfangen
     sp.as_int = PROCESS_STACK_BOTTOM(pid);
 	sum = *(sp.as_ptr);
+	sp.as_int--;
 	//bis zum Stackpointer durchlaufen und Bytes xor verknüpfen
 	while (sp.as_int > os_processes[pid].sp.as_int){
-		sp.as_int--;
 		sum = sum ^ *(sp.as_ptr);
+		sp.as_int--;
 	}
 	return sum;
 }
